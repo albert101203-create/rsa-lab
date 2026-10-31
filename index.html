@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="작은 수로 RSA 키 생성, 암호화·복호화, 소인수분해 해독을 체험하는 교육용 웹사이트">
+  <title>RSA LAB — 작은 수로 배우는 공개키 암호</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#practice">실습으로 바로 가기</a>
+
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="RSA LAB 처음으로">
+      <span class="brand-mark" aria-hidden="true">R</span>
+      <span>RSA LAB</span>
+    </a>
+    <nav aria-label="주요 메뉴">
+      <a href="#practice">암호 실습</a>
+      <a href="#attack">해독 실험</a>
+      <a href="#theory">탐구 정리</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow">INTERACTIVE RSA LAB</p>
+        <h1 id="hero-title">작은 수로 직접 열어보는<br><span>RSA 암호의 원리</span></h1>
+        <p class="hero-description">
+          두 소수로 키를 만들고, 숫자 메시지를 암호화한 뒤 다시 복호화해 보세요.
+          공개된 수를 소인수분해하는 해독 실험까지 한 화면에서 확인할 수 있습니다.
+        </p>
+        <div class="hero-actions">
+          <a class="button primary" href="#practice">실습 시작하기</a>
+          <a class="button ghost" href="#theory">원리 먼저 보기</a>
+        </div>
+        <div class="topic-line" aria-label="탐구 핵심어">
+          <span>공개키 암호</span><span>소인수분해</span><span>웹 프로그래밍</span>
+        </div>
+      </div>
+
+      <div class="key-visual" aria-label="RSA 암호의 흐름">
+        <div class="visual-label">RSA FLOW</div>
+        <div class="flow-card public">
+          <span class="flow-number">01</span>
+          <div><strong>공개키</strong><small>(n, e)로 잠그기</small></div>
+          <span class="flow-icon" aria-hidden="true">⌁</span>
+        </div>
+        <div class="flow-line"><span></span></div>
+        <div class="flow-card cipher">
+          <span class="flow-number">02</span>
+          <div><strong>암호문</strong><small>읽을 수 없는 숫자</small></div>
+          <span class="flow-icon" aria-hidden="true">#</span>
+        </div>
+        <div class="flow-line"><span></span></div>
+        <div class="flow-card private">
+          <span class="flow-number">03</span>
+          <div><strong>개인키</strong><small>d로 다시 열기</small></div>
+          <span class="flow-icon" aria-hidden="true">⌂</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="notice" aria-label="교육용 안내">
+      <strong>교육용 프로그램</strong>
+      <p>작은 소수와 단순한 RSA 계산을 사용합니다. 실제 비밀번호나 개인정보 보호에는 사용할 수 없습니다.</p>
+    </section>
+
+    <section class="section" id="practice" aria-labelledby="practice-title">
+      <div class="section-heading">
+        <div><p class="eyebrow">INTERACTIVE LAB</p><h2 id="practice-title">RSA 암호화·복호화 실습</h2></div>
+        <p>왼쪽부터 차례대로 진행하면 RSA의 전체 과정을 확인할 수 있습니다.</p>
+      </div>
+
+      <div class="stepper" aria-label="실습 진행 단계">
+        <span class="step is-active" id="stepMark1">1 키 만들기</span>
+        <span class="step" id="stepMark2">2 암호화</span>
+        <span class="step" id="stepMark3">3 복호화</span>
+      </div>
+
+      <div class="lab-grid">
+        <article class="lab-card" id="keyCard">
+          <div class="card-head"><span class="card-index">01</span><div><h3>두 소수로 키 만들기</h3><p>서로 다른 작은 소수를 입력하세요.</p></div></div>
+          <div class="input-grid two">
+            <label>소수 p<input id="pInput" type="number" min="3" max="10000" step="1" value="3" inputmode="numeric"></label>
+            <label>소수 q<input id="qInput" type="number" min="3" max="10000" step="1" value="11" inputmode="numeric"></label>
+          </div>
+          <div class="button-row">
+            <button class="button primary" id="generateBtn" type="button">키 생성하기</button>
+            <button class="text-button" id="showPrimesBtn" type="button">소수 보기</button>
+          </div>
+          <p class="field-message" id="keyMessage" role="status"></p>
+
+          <div class="key-results" id="keyResults" hidden>
+            <div><span>n = p × q</span><strong id="nResult">–</strong></div>
+            <div><span>키 계산값 (p−1)×(q−1)</span><strong id="phiResult">–</strong></div>
+            <div class="accent"><span>공개키 (n, e)</span><strong id="publicResult">–</strong></div>
+            <div class="dark"><span>개인키 d</span><strong id="privateResult">–</strong></div>
+          </div>
+          <div class="calculation" id="keyCalculation" hidden></div>
+        </article>
+
+        <article class="lab-card" id="encryptCard">
+          <div class="card-head"><span class="card-index">02</span><div><h3>메시지 암호화</h3><p>0 이상 n 미만의 숫자를 입력하세요.</p></div></div>
+          <label>원래 메시지 M<input id="messageInput" type="number" min="0" step="1" value="4" inputmode="numeric"></label>
+          <button class="button primary full" id="encryptBtn" type="button" disabled>공개키로 암호화</button>
+          <p class="field-message" id="encryptMessage" role="status"></p>
+          <div class="result-panel" id="encryptResult" hidden>
+            <span>생성된 암호문 C</span>
+            <strong id="cipherValue">–</strong>
+            <code id="encryptFormula">C = Mᵉ mod n</code>
+          </div>
+        </article>
+
+        <article class="lab-card" id="decryptCard">
+          <div class="card-head"><span class="card-index">03</span><div><h3>암호문 복호화</h3><p>개인키로 원래 메시지를 되찾습니다.</p></div></div>
+          <label>암호문 C<input id="cipherInput" type="number" min="0" step="1" placeholder="먼저 암호화하세요" inputmode="numeric"></label>
+          <button class="button dark full" id="decryptBtn" type="button" disabled>개인키로 복호화</button>
+          <p class="field-message" id="decryptMessage" role="status"></p>
+          <div class="result-panel success" id="decryptResult" hidden>
+            <span>복원된 메시지 M</span>
+            <strong id="plainValue">–</strong>
+            <code id="decryptFormula">M = Cᵈ mod n</code>
+          </div>
+        </article>
+      </div>
+
+      <div class="completion-explanation" id="processExplanation" hidden>
+        <p class="eyebrow">PRACTICE COMPLETE</p>
+        <h3>방금 완료한 RSA 과정</h3>
+        <p class="process-summary" id="processSummary"></p>
+        <div class="explanation-grid">
+          <article>
+            <h4>왜 다시 원문으로 돌아올까?</h4>
+            <p>공개키와 개인키는 서로 연결되도록 만들어진다. 공개키로 바꾼 암호문에 알맞은 개인키를 적용하면 처음 입력한 값으로 돌아온다. 공개키는 알려져도 되지만 개인키는 소유자만 안전하게 보관해야 한다.</p>
+          </article>
+          <article>
+            <h4>RSA는 어디에 사용될까?</h4>
+            <p>실제 환경에서는 데이터를 전부 RSA로 암호화하기보다, 통신에 사용할 비밀키를 안전하게 전달하거나 전자서명과 인증서로 상대방의 신원을 확인하는 데 활용한다. 로그인, 온라인 결제, 전자문서 전송 과정의 안전한 통신을 지원하는 기술 중 하나이다.</p>
+          </article>
+          <article>
+            <h4>이 실습에서 주의할 점</h4>
+            <p>이 사이트는 원리를 확인하기 위해 작은 소수와 숫자 메시지를 사용한다. 실제 개인정보나 비밀번호를 보호하는 용도로 사용할 수 없으며, 실제 RSA는 훨씬 큰 키와 안전한 처리 방식을 사용한다.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="attack-section" id="attack" aria-labelledby="attack-title">
+      <div class="attack-copy">
+        <p class="eyebrow light">BREAK THE SMALL KEY</p>
+        <h2 id="attack-title">공개키만으로 해독할 수 있을까?</h2>
+        <p>공개된 <strong>n</strong>을 작은 수부터 나누어 소수 p와 q를 찾아냅니다. 두 소수를 찾으면 개인키도 다시 계산할 수 있습니다.</p>
+        <ol>
+          <li>n의 약수를 차례로 검사한다.</li>
+          <li>p와 q를 찾아 키 계산값을 구한다.</li>
+          <li>개인키 d를 복원해 암호문을 해독한다.</li>
+        </ol>
+      </div>
+
+      <div class="attack-console">
+        <div class="console-top"><span></span><span></span><span></span><strong>factor_attack.js</strong></div>
+        <div class="console-body">
+          <div class="console-values">
+            <div><span>공개된 n</span><strong id="attackN">키 생성 필요</strong></div>
+            <div><span>공개된 e</span><strong id="attackE">–</strong></div>
+            <div><span>암호문 C</span><strong id="attackC">암호화 필요</strong></div>
+          </div>
+          <button class="button danger full" id="attackBtn" type="button" disabled>소인수분해로 해독하기</button>
+          <p class="field-message console-message" id="attackMessage" role="status"></p>
+          <div class="attack-output" id="attackOutput" hidden>
+            <p><span>&gt; 발견한 소수</span><strong id="factorResult">–</strong></p>
+            <p><span>&gt; 나눗셈 시도</span><strong id="attemptResult">–</strong></p>
+            <p><span>&gt; 복원한 개인키</span><strong id="crackedKeyResult">–</strong></p>
+            <p class="recovered"><span>&gt; 해독한 메시지</span><strong id="recoveredResult">–</strong></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section experiment" aria-labelledby="experiment-title">
+      <div class="section-heading">
+        <div><p class="eyebrow">COMPARISON</p><h2 id="experiment-title">숫자가 커지면 해독 시도는?</h2></div>
+        <p>비슷한 크기의 두 소수를 곱한 뒤, 약수를 찾을 때까지 필요한 나눗셈 횟수를 비교합니다.</p>
+      </div>
+      <button class="button primary" id="runExperimentBtn" type="button">비교 실험 실행</button>
+      <div class="table-wrap" id="experimentWrap" hidden>
+        <table>
+          <thead><tr><th>p</th><th>q</th><th>공개된 n</th><th>나눗셈 시도</th><th>상대 비교</th></tr></thead>
+          <tbody id="experimentBody"></tbody>
+        </table>
+        <p class="table-note">※ 실행 시간 대신 나눗셈 횟수를 사용해 컴퓨터 성능의 영향을 줄였습니다.</p>
+      </div>
+    </section>
+
+    <section class="theory-section" id="theory" aria-labelledby="theory-title">
+      <div class="section-heading">
+        <div><p class="eyebrow">WHAT I LEARNED</p><h2 id="theory-title">실험으로 확인한 RSA</h2></div>
+        <p>작은 수의 실험을 실제 보안에 그대로 적용할 수 없는 이유까지 함께 살펴봅니다.</p>
+      </div>
+      <div class="theory-grid">
+        <article><span>01</span><h3>왜 소수를 사용할까?</h3><p>p와 q를 곱해 n을 만드는 것은 쉽지만, n만 보고 원래의 두 소수를 찾는 과정은 수가 커질수록 어려워집니다.</p></article>
+        <article><span>02</span><h3>작은 RSA의 한계</h3><p>이 사이트의 n은 직접 나누어 약수를 빠르게 찾을 수 있습니다. 실제 RSA의 안전성을 증명하는 프로그램이 아닙니다.</p></article>
+        <article><span>03</span><h3>실제 RSA와의 차이</h3><p>실제 환경은 매우 큰 키와 안전한 패딩 방식을 사용합니다. 이 사이트는 숫자 한 개만 처리하는 학습용 모형입니다.</p></article>
+        <article><span>04</span><h3>양자컴퓨터 시대의 대안</h3><p>충분히 발전한 양자컴퓨터는 RSA에 위협이 될 수 있어, 소인수분해와 다른 문제에 기반한 양자내성암호가 연구·도입되고 있습니다.</p></article>
+      </div>
+      <div class="conclusion">
+        <p class="eyebrow">CONCLUSION</p>
+        <blockquote>“RSA의 핵심은 암호 계산 자체를 숨기는 것이 아니라, 공개된 n에서 원래의 두 소수를 찾기 어렵게 만드는 데 있다.”</blockquote>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div><strong>RSA LAB</strong><p>디지털 사회의 개인정보 보호와 암호 기술</p></div>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <div class="prime-modal" id="primeModal" role="dialog" aria-modal="true" aria-labelledby="primeModalTitle" hidden>
+    <div class="prime-dialog">
+      <div class="prime-dialog-head">
+        <div>
+          <p class="eyebrow">PRIME NUMBER LIST</p>
+          <h2 id="primeModalTitle">1부터 10,000까지의 소수</h2>
+          <p>1은 소수가 아니며, 이 범위에는 총 1,229개의 소수가 있습니다.</p>
+        </div>
+        <button class="prime-close" id="closePrimeModalBtn" type="button" aria-label="소수 목록 닫기">×</button>
+      </div>
+      <div class="prime-list" id="primeList" aria-label="2부터 10,000까지의 소수 목록"></div>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
