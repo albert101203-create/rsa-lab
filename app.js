@@ -95,6 +95,7 @@ const $ = (id) => document.getElementById(id);
 
 let currentKey = null;
 let currentCipher = null;
+let currentMessage = null;
 
 const elements = {
   p: $("pInput"), q: $("qInput"), generate: $("generateBtn"), showPrimes: $("showPrimesBtn"),
@@ -104,6 +105,7 @@ const elements = {
   encryptResult: $("encryptResult"), cipherValue: $("cipherValue"), encryptFormula: $("encryptFormula"),
   cipher: $("cipherInput"), decrypt: $("decryptBtn"), decryptMessage: $("decryptMessage"),
   decryptResult: $("decryptResult"), plainValue: $("plainValue"), decryptFormula: $("decryptFormula"),
+  comparisonResult: $("comparisonResult"),
   processExplanation: $("processExplanation"), processSummary: $("processSummary"),
   attackN: $("attackN"), attackE: $("attackE"), attackC: $("attackC"), attack: $("attackBtn"),
   attackMessage: $("attackMessage"), attackOutput: $("attackOutput"), factorResult: $("factorResult"),
@@ -158,6 +160,7 @@ function generateKeys() {
     if (p > 10000n || q > 10000n) throw new Error("실습에서는 10,000 이하의 소수를 사용하세요.");
     currentKey = createKeyPair(p, q);
     currentCipher = null;
+    currentMessage = null;
     elements.message.max = (currentKey.n - 1n).toString();
     elements.processExplanation.hidden = true;
 
@@ -187,9 +190,21 @@ function generateKeys() {
     setActiveStep(2);
   } catch (error) {
     currentKey = null;
+    currentCipher = null;
+    currentMessage = null;
     elements.keyResults.hidden = true;
     elements.keyCalculation.hidden = true;
     elements.encrypt.disabled = true;
+    elements.decrypt.disabled = true;
+    elements.encryptResult.hidden = true;
+    elements.decryptResult.hidden = true;
+    elements.processExplanation.hidden = true;
+    elements.attackOutput.hidden = true;
+    elements.attack.disabled = true;
+    elements.cipher.value = "";
+    elements.attackN.textContent = "–";
+    elements.attackE.textContent = "–";
+    elements.attackC.textContent = "암호화 필요";
     setMessage(elements.keyMessage, error.message);
   }
 }
@@ -200,6 +215,7 @@ function encryptMessage() {
     if (!currentKey) throw new Error("먼저 키를 생성하세요.");
     const message = readInteger(elements.message, "메시지");
     currentCipher = encryptNumber(message, currentKey);
+    currentMessage = message;
     elements.processExplanation.hidden = true;
     elements.cipherValue.textContent = format(currentCipher);
     elements.encryptFormula.textContent = `C = ${message}^${currentKey.e} mod ${currentKey.n} = ${currentCipher}`;
@@ -212,7 +228,16 @@ function encryptMessage() {
     setMessage(elements.encryptMessage, `메시지 ${message}를 암호문 ${currentCipher}(으)로 바꿨습니다.`, true);
     setActiveStep(3);
   } catch (error) {
+    currentCipher = null;
+    currentMessage = null;
     elements.encryptResult.hidden = true;
+    elements.decryptResult.hidden = true;
+    elements.processExplanation.hidden = true;
+    elements.decrypt.disabled = true;
+    elements.attack.disabled = true;
+    elements.attackOutput.hidden = true;
+    elements.cipher.value = "";
+    elements.attackC.textContent = "암호화 필요";
     setMessage(elements.encryptMessage, error.message);
   }
 }
@@ -223,17 +248,37 @@ function decryptMessage() {
     if (!currentKey) throw new Error("먼저 키를 생성하세요.");
     const cipher = readInteger(elements.cipher, "암호문");
     const plain = decryptNumber(cipher, currentKey);
+    const hasOriginal = currentMessage !== null;
+    const matchesOriginal = hasOriginal && plain === currentMessage;
     elements.plainValue.textContent = format(plain);
     elements.decryptFormula.textContent = `M = ${cipher}^${currentKey.d} mod ${currentKey.n} = ${plain}`;
+    elements.decryptResult.classList.toggle("success", matchesOriginal);
+    elements.decryptResult.classList.toggle("mismatch", hasOriginal && !matchesOriginal);
+    elements.comparisonResult.textContent = hasOriginal
+      ? (matchesOriginal
+        ? `일치 확인: 원문 ${currentMessage} = 복호화 결과 ${plain}`
+        : `불일치: 원문 ${currentMessage} ≠ 복호화 결과 ${plain}`)
+      : "비교할 원문이 없습니다.";
+    elements.comparisonResult.classList.toggle("is-match", matchesOriginal);
+    elements.comparisonResult.classList.toggle("is-mismatch", hasOriginal && !matchesOriginal);
     elements.decryptResult.hidden = false;
-    elements.processSummary.textContent = `원문 ${plain}을 공개키 (${currentKey.n}, ${currentKey.e})로 암호화해 암호문 ${cipher}(으)로 바꾸고, 개인키 ${currentKey.d}로 복호화하여 다시 원문 ${plain}을 되찾았습니다.`;
+    elements.processSummary.textContent = hasOriginal
+      ? `원문 ${currentMessage}을 공개키 (${currentKey.n}, ${currentKey.e})로 암호화한 뒤 개인키 ${currentKey.d}로 복호화한 결과 ${plain}을 얻었습니다. 두 값은 ${matchesOriginal ? "일치합니다" : "일치하지 않습니다"}.`
+      : `암호문 ${cipher}을 개인키 ${currentKey.d}로 복호화한 결과 ${plain}을 얻었습니다.`;
     elements.processExplanation.hidden = false;
     elements.processExplanation.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    setMessage(elements.decryptMessage, `암호문에서 메시지 ${plain}을(를) 되찾았습니다.`, true);
-    setActiveStep(3, true);
-    showToast("암호화·복호화 실험에 성공했습니다.");
+    setMessage(
+      elements.decryptMessage,
+      matchesOriginal
+        ? `복호화 결과 ${plain}이 처음 입력한 원문과 일치합니다.`
+        : `복호화 결과 ${plain}이 처음 입력한 원문 ${currentMessage}과 일치하지 않습니다.`,
+      matchesOriginal
+    );
+    setActiveStep(3, matchesOriginal);
+    showToast(matchesOriginal ? "원문과 복호화 결과가 일치합니다." : "원문과 복호화 결과가 일치하지 않습니다.");
   } catch (error) {
     elements.decryptResult.hidden = true;
+    elements.processExplanation.hidden = true;
     setMessage(elements.decryptMessage, error.message);
   }
 }
